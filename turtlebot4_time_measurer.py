@@ -18,7 +18,7 @@ class TurtleBot4TimeMeasurer(Node):
         self.subscription = self.create_subscription(
             PoseStamped,
             '/turtle/goal_pose',
-            self.pose_callback,
+            self.goal_callback,
             10)
         self.start_time = None
     def goal_callback(self, msg):
