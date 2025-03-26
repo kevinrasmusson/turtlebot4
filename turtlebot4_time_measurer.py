@@ -34,7 +34,18 @@ class TurtleBot4TimeMeasurer(Node):
             self.get_logger().info('No goal received yet')
         #self.start_time = time.time() # Start the timer
         
-        #Use euclidiean distance to calculate the length of the path
+    #Use euclidiean distance to calculate the length of the path
+    def compute_path_length(self, path_msg):
+        path_length = 0
+        for i in range(1, len(path_msg.poses)):
+            x1 = path_msg.poses[i-1].pose.position.x
+            y1 = path_msg.poses[i-1].pose.position.y
+            x2 = path_msg.poses[i].pose.position.x
+            y2 = path_msg.poses[i].pose.position.y
+            path_length += self.euclidean_distance(x1, y1, x2, y2)
+        return path_length
+    def euclidean_distance(self, x1, y1, x2, y2):
+        return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
 def main (args=None):
     rclpy.init(args=args)
