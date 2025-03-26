@@ -28,7 +28,8 @@ class TurtleBot4TimeMeasurer(Node):
         if self.start_time is not None:
             end_time = time.time()
             planning_time = end_time - self.start_time
-            self.get_logger().info(f'Planning time: {planning_time:.4f} seconds')
+            path_length = self.compute_path_length(msg)
+            self.get_logger().info(f'Planning time: {planning_time:.4f} s | Path length: {path_length:.2f} m')
             self.start_time = None # Reset the timer
         else:
             self.get_logger().info('No goal received yet')
