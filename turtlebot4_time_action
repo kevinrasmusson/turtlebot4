@@ -1,35 +1,43 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.action import ActionServer
+from rclpy.action import ActionClient
 from nav2_msgs.action import ComputePathToPose
+
 
 class ComputePathListener(Node):
     def __init__(self):
         super().__init__('compute_path_listener')
 
-        # Create an action server to listen for ComputePathToPose results
-        self._action_server = ActionServer(
-            self,
-            ComputePathToPose,
-            '/turtle/compute_path_to_pose',
-            execute_callback=self.compute_path_callback)
+        # Create an Action Client to listen to ComputePathToPose results
+        self._action_client = ActionClient(self, ComputePathToPose, '/turtle/compute_path_to_pose')
+
+        self.get_logger().info("Waiting for /turtle/compute_path_to_pose action server...")
+        self._action_client.wait_for_server()
 
         self.get_logger().info("Listening for computed paths on /turtle/compute_path_to_pose.")
 
-    async def compute_path_callback(self, goal_handle):
-        """ Callback triggered when a path computation is completed. """
-        # Access the result from the goal_handle
-        result = goal_handle.get_result_async()
+        # Wait for and monitor computed paths
+        self.monitor_path_computation()
 
-        # Wait for the result to be available
-        rclpy.spin_until_future_complete(self, result)
+    def monitor_path_computation(self):
+        """ Waits for computed path results from the Nav2 planner. """
+        future = self._action_client.get_result_async()
+        future.add_done_callback(self.path_computed_callback)
 
-        # Print the actual planning time
-        planning_seconds = result.result().planning_time.sec + result.result().planning_time.nanosec * 1e-9
-        self.get_logger().info(f"Path planning time: {planning_seconds:.3f} sec")
+    def path_computed_callback(self, future):
+        """ Extracts and prints the actual planning time from Nav2. """
+        try:
+            result = future.result().result
+            planning_seconds = result.planning_time.sec + result.planning_time.nanosec * 1e-9
 
-        goal_handle.succeed()
-        return result.result()
+            self.get_logger().info(f"✅ Path computed! Planning time: {planning_seconds:.3f} sec")
+
+        except Exception as e:
+            self.get_logger().error(f"⚠️ Error receiving path computation result: {str(e)}")
+
+        # Continue monitoring for new path computations
+        self.monitor_path_computation()
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -37,6 +45,7 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
