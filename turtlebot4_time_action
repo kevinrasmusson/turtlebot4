@@ -4,10 +4,12 @@ from rclpy.action import ActionServer
 from nav2_msgs.action import NavigateToPose, ComputePathToPose
 from geometry_msgs.msg import PoseStamped
 
-
 class NavigationListener(Node):
     def __init__(self):
         super().__init__('navigation_listener')
+
+        # Store last received goal to avoid duplicate prints
+        self.last_goal_position = None
 
         # Action server for NavigateToPose
         self._navigate_action_server = ActionServer(
@@ -28,21 +30,24 @@ class NavigationListener(Node):
     async def navigate_callback(self, goal_handle):
         """Callback for when a new NavigateToPose goal is received."""
         goal = goal_handle.request.pose
-        self.get_logger().info(f"New navigation goal received: {goal.pose.position}")
-        
-        # Return an empty result since we only listen
+
+        # Print only if it's a new goal
+        if self.last_goal_position != (goal.pose.position.x, goal.pose.position.y):
+            self.last_goal_position = (goal.pose.position.x, goal.pose.position.y)
+            self.get_logger().info(f"New navigation goal received: {goal.pose.position}")
+
         result = NavigateToPose.Result()
         goal_handle.succeed()
         return result
 
     async def compute_path_callback(self, goal_handle):
         """Callback for when a new ComputePathToPose goal is received."""
-        goal = goal_handle.request.goal
-        self.get_logger().info(f"Path computed to goal: {goal.pose.position}")
-
-        # Return an empty result since we only listen
         result = ComputePathToPose.Result()
         goal_handle.succeed()
+
+        # Print the planning time when a path is computed
+        self.get_logger().info(f"Path planning time: {result.planning_time.sec}.{result.planning_time.nanosec} seconds")
+        
         return result
 
 
