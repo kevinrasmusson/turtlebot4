@@ -1,0 +1,50 @@
+import rclpy
+from rclpy.node import Node
+from rclpy.action import ActionClient
+from nav2_msgs.action import NavigateToPose
+from geometry_msgs.msg import PoseStamped
+import time
+
+class TurtleBot4TimeMeasurer(Node):
+    def __init__(self):
+        super().__init__('turtlebot4_time_measurer')
+
+        # Create an action client to listen for navigation goals
+        self.action_client = ActionClient(self, NavigateToPose, '/turtle/navigate_to_pose')
+
+        # Track the start time
+        self.start_time = None
+
+        # Monitor active goals
+        self.action_client.wait_for_server()
+        self.get_logger().info("Connected to /turtle/navigate_to_pose action server!")
+
+        # Get feedback when a new goal is sent
+        self.goal_handle = None
+
+    def send_goal_request(self):
+        """ Send a dummy goal to attach a callback to active goals """
+        goal_msg = NavigateToPose.Goal()
+        self.goal_handle = self.action_client.send_goal_async(goal_msg, feedback_callback=self.goal_feedback_callback)
+
+    def goal_feedback_callback(self, feedback_msg):
+        """ Callback triggered when a goal is received """
+        self.start_time = time.time()
+        self.get_logger().info('New goal received! Timer started.')
+
+    def goal_result_callback(self, future):
+        """ Callback triggered when a goal is completed """
+        result = future.result()
+        if result:
+            self.get_logger().info('Goal reached!')
+        else:
+            self.get_logger().info('Goal failed!')
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = TurtleBot4TimeMeasurer()
+    rclpy.spin(node)
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
