@@ -1,46 +1,59 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.action import ActionClient
-from nav2_msgs.action import ComputePathToPose
+from rclpy.action import ActionServer
+from nav2_msgs.action import NavigateToPose, ComputePathToPose
+from geometry_msgs.msg import PoseStamped
 
-
-class ComputePathListener(Node):
+class NavigationListener(Node):
     def __init__(self):
-        super().__init__('compute_path_listener')
+        super().__init__('navigation_listener')
 
-        # Create an action client to listen to ComputePathToPose results
-        self._action_client = ActionClient(self, ComputePathToPose, '/turtle/compute_path_to_pose')
+        # Store last received goal to avoid duplicate prints
+        self.last_goal_position = None
 
-        # Wait for the action server (Nav2 planner) to be available
-        self._action_client.wait_for_server()
+        # Action server for NavigateToPose
+        self._navigate_action_server = ActionServer(
+            self,
+            NavigateToPose,
+            '/turtle/navigate_to_pose',
+            execute_callback=self.navigate_callback)
+        
+        # Action server for ComputePathToPose
+        self._compute_path_action_server = ActionServer(
+            self,
+            ComputePathToPose,
+            '/turtle/compute_path_to_pose',
+            execute_callback=self.compute_path_callback)
 
-        self.get_logger().info("Listening for computed paths on /turtle/compute_path_to_pose.")
+        self.get_logger().info("Navigation listener started for namespace /turtle.")
 
-        # Start monitoring for completed paths
-        self.monitor_path_computation()
+    async def navigate_callback(self, goal_handle):
+        """Callback for when a new NavigateToPose goal is received."""
+        goal = goal_handle.request.pose
 
-    def monitor_path_computation(self):
-        """ Monitors for completed path computations by requesting status updates. """
-        future = self._action_client.get_result_async()
-        future.add_done_callback(self.path_computed_callback)
+        # Print only if it's a new goal
+        if self.last_goal_position != (goal.pose.position.x, goal.pose.position.y):
+            self.last_goal_position = (goal.pose.position.x, goal.pose.position.y)
+            self.get_logger().info(f"New navigation goal received: {goal.pose.position}")
 
-    def path_computed_callback(self, future):
-        """ Callback triggered when a path computation is completed. """
-        try:
-            result = future.result().result
-            planning_time = result.planning_time
-            self.get_logger().info(f"Path planning time: {planning_time.sec}.{planning_time.nanosec} seconds")
+        result = NavigateToPose.Result()
+        goal_handle.succeed()
+        return result
 
-        except Exception as e:
-            self.get_logger().error(f"Error receiving path computation result: {str(e)}")
+    async def compute_path_callback(self, goal_handle):
+        """Callback for when a new ComputePathToPose goal is received."""
+        result = ComputePathToPose.Result()
+        goal_handle.succeed()
 
-        # Continue monitoring for the next computation
-        self.monitor_path_computation()
+        # Print the planning time when a path is computed
+        self.get_logger().info(f"Path planning time: {result.planning_time.sec}.{result.planning_time.nanosec} seconds")
+        
+        return result
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ComputePathListener()
+    node = NavigationListener()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
