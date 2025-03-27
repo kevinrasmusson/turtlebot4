@@ -8,34 +8,34 @@ class ComputePathListener(Node):
     def __init__(self):
         super().__init__('compute_path_listener')
 
-        # Create an Action Client to listen to ComputePathToPose results
+        # Create an Action Client to listen for ComputePathToPose results
         self._action_client = ActionClient(self, ComputePathToPose, '/turtle/compute_path_to_pose')
 
         self.get_logger().info("Waiting for /turtle/compute_path_to_pose action server...")
-        self._action_client.wait_for_server()
+        self._action_client.wait_for_server(timeout_sec=10.0)  # Avoid infinite wait
 
         self.get_logger().info("Listening for computed paths on /turtle/compute_path_to_pose.")
 
-        # Wait for and monitor computed paths
+        # Start monitoring for path computation results
         self.monitor_path_computation()
 
     def monitor_path_computation(self):
-        """ Waits for computed path results from the Nav2 planner. """
+        """ Monitors and listens for path computation results. """
         future = self._action_client.get_result_async()
         future.add_done_callback(self.path_computed_callback)
 
     def path_computed_callback(self, future):
-        """ Extracts and prints the actual planning time from Nav2. """
+        """ Callback triggered when a path computation is completed. """
         try:
             result = future.result().result
             planning_seconds = result.planning_time.sec + result.planning_time.nanosec * 1e-9
 
-            self.get_logger().info(f"✅ Path computed! Planning time: {planning_seconds:.3f} sec")
+            self.get_logger().info(f"Path computed! Planning time: {planning_seconds:.3f} sec")
 
         except Exception as e:
             self.get_logger().error(f"⚠️ Error receiving path computation result: {str(e)}")
 
-        # Continue monitoring for new path computations
+        # Continue listening for new paths
         self.monitor_path_computation()
 
 
