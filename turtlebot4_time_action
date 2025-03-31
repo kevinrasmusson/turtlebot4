@@ -21,7 +21,7 @@ class ComputePathListener(Node):
 
     def monitor_navigation(self):
         """ Monitors and listens for path computation results. """
-        future = self._action_client.get_result_async()
+        future = self._action_client._get_result_async()
         future.add_done_callback(self.navigation_result_callback)
 
     def navigation_result_callback(self, future):
@@ -33,7 +33,7 @@ class ComputePathListener(Node):
             self.get_logger().info(f"Navigation completed! Time: {navigation_time.sec} seconds and {navigation_time.nanosec} nanoseconds")
 
         except Exception as e:
-            self.get_logger().error(f"⚠️ Error receiving navigation result: {str(e)}")
+            self.get_logger().error(f"Error receiving navigation result: {str(e)}")
 
         
     def goal_response_callback(self, future):

@@ -1,49 +1,40 @@
-import rclpy
-from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
-import time
+from geometry_msgs.msg import PoseStamped
+import math
 
-class PlannerComparisonNode(Node):
+class PathListener(Node):
     def __init__(self):
-        super().__init__('planner_comparison_node')
-        self.goal_time = None
+        super().__init__('path_listener')
 
-        # Subscribe to the goal topic
-        self.goal_subscriber = self.create_subscription(
-            PoseStamped,
-            '/turtle/goal_pose',
-            self.goal_callback,
-            10
-        )
-
-        # Subscribe to the plan topic
-        self.plan_subscriber = self.create_subscription(
+        self.subscription = self.create_subscription(
             Path,
             '/turtle/plan',
-            self.plan_callback,
+            self.path_callback,
             10
         )
+        self.get_logger().info("Subscribed to /turtle/plan")
 
-    def goal_callback(self, msg):
-        # Record the time when a goal is received
-        self.goal_time = time.time()
-        self.get_logger().info('Goal received')
+    def path_callback(self, msg: Path):
+        distance = 0.0
+        poses = msg.poses
+        for i in range(1, len(poses)):
+            x1 = poses[i-1].pose.position.x
+            y1 = poses[i-1].pose.position.y
+            x2 = poses[i].pose.position.x
+            y2 = poses[i].pose.position.y
+            dx = x2 - x1
+            dy = y2 - y1
+            distance += math.hypot(dx, dy)
 
-    def plan_callback(self, msg):
-        # Check if a goal time was recorded
-        if self.goal_time is not None:
-            # Calculate the time difference
-            plan_time = time.time()
-            time_difference = plan_time - self.goal_time
-            self.get_logger().info(f'Planning time: {time_difference:.4f} seconds')
-            # Reset the goal time
-            self.goal_time = None
-
+        self.get_logger().info(f"Path length: {distance:.2f} meters")
 def main(args=None):
     rclpy.init(args=args)
-    node = PlannerComparisonNode()
-    rclpy.spin(node)
+
+    path_listener = PathListener()
+
+    rclpy.spin(path_listener)
+
+    path_listener.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
