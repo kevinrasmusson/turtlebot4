@@ -3,11 +3,18 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 import math
 import rclpy
+import logging
 
 class PathListener(Node):
 	def __init__(self):
 		super().__init__('path_listener')
 
+		logging.basicConfig(
+			filename='path_distance.log',
+			level=logging.INFO,
+			format='%(asctime)s - %(message)s',
+			datefmt='%Y-%m-%d %H:%M:%S'
+		)
 		self.subscription = self.create_subscription(
 			Path,
 			'/turtle/plan',
@@ -30,7 +37,9 @@ class PathListener(Node):
 				distance += math.hypot(dx, dy)
 
 			self.get_logger().info(f"Path length: {distance:.2f} meters")
+			logging.info(f"Path length: {distance:.2f} meters")
 			self.logged_once = True
+			
 def main(args=None):
 	rclpy.init(args=args)
 
