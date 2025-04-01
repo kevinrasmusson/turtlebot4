@@ -4,11 +4,13 @@ from geometry_msgs.msg import PoseStamped
 import math
 import rclpy
 import logging
+from nav2_msgs.action import NavigateToPose
+from rclpy.action import ActionClient
 
 class PathListener(Node):
 	def __init__(self):
 		super().__init__('path_listener')
-
+		self.action_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 		logging.basicConfig(
 			filename='path_distance.log',
 			level=logging.INFO,
@@ -23,6 +25,20 @@ class PathListener(Node):
 		)
 		self.get_logger().info("Subscribed to /turtle/plan")
 		self.logged_once = False
+		self.send_goal()
+	def send_goal(self):
+		goal_msg = NavigateToPose.Goal()
+
+		goal_pose = PoseStamped()
+		goal_pose.header.frame_id = 'map'
+
+
+		goal_pose.position.x = 25.1
+		goal_pose.position.y = -13.2
+		goal_pose.orientation.w = -0.00134
+		self.action_client.wait_for_server()
+		self.get_logger().info("Sending goal to /navigate_to_pose")
+		self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
 	def path_callback(self, msg: Path):
 		if not self.logged_once:
 			distance = 0.0
