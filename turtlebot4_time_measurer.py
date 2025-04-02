@@ -30,7 +30,7 @@ class PathListener(Node):
 		self.send_goal()
 
 	def set_initial_pose(self):
-		initial_pose = PoseStamped()
+		initial_pose = PoseWithCovarianceStamped()
 		initial_pose.header.frame_id = 'map'
 		initial_pose.pose.position.x = -0.157
 		initial_pose.pose.position.y = 0.068
