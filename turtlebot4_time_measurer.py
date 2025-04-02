@@ -32,20 +32,20 @@ class PathListener(Node):
 	def set_initial_pose(self):
 		initial_pose = PoseWithCovarianceStamped()
 		initial_pose.header.frame_id = 'map'
-		initial_pose.pose.position.x = -0.157
-		initial_pose.pose.position.y = 0.068
-		initial_pose.pose.position.z = 0.0
+		initial_pose.pose.pose.position.x = -0.157
+		initial_pose.pose.pose.position.y = 0.068
+		initial_pose.pose.pose.position.z = 0.0
 
-		initial_pose.pose.orientation.x = 0.0
-		initial_pose.pose.orientation.y = 0.0
-		initial_pose.pose.orientation.z = 0.0
-		initial_pose.pose.orientation.w = 1.739
+		initial_pose.pose.pose.orientation.x = 0.0
+		initial_pose.pose.pose.orientation.y = 0.0
+		initial_pose.pose.pose.orientation.z = 0.0
+		initial_pose.pose.pose.orientation.w = 1.739
 
-		initial_pose.pose.covariance[0] = 0.25
-		initial_pose.pose.covariance[7] = 0.25
-		initial_pose.pose.covariance[35] = 0.06853891945200942 # ChatGPT number
+		initial_pose.pose.pose.covariance[0] = 0.25
+		initial_pose.pose.pose.covariance[7] = 0.25
+		initial_pose.pose.pose.covariance[35] = 0.06853891945200942 # ChatGPT number
 		
-
+		time.sleep(1)
 		self.initial_pose_pub.publish(initial_pose)
 		self.get_logger().info("Published initial pose to /turtle/initialpose")
 
@@ -56,13 +56,19 @@ class PathListener(Node):
 		goal_pose.header.frame_id = 'map'
 
 
-		goal_pose.position.x = -0.40
-		goal_pose.position.y = 1.42
-		goal_pose.position.z = 0.0
-		goal_pose.orientation.w = -0.00134
+		goal_pose.pose.position.x = -0.40
+		goal_pose.pose.position.y = 1.42
+		goal_pose.pose.position.z = 0.0
+		goal_pose.pose.orientation.x = 0.0
+		goal_pose.pose.orientation.y = 0.0
+		goal_pose.pose.orientation.z = 0.0
+		goal_pose.pose.orientation.w = -0.00134
+
+		goal_msg.pose = goal_pose
+
 		self.action_client.wait_for_server()
 		self.get_logger().info("Sending goal to /navigate_to_pose")
-		self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
+		self.action_client.send_goal_async(goal_msg)
 	def path_callback(self, msg: Path):
 		if not self.logged_once:
 			distance = 0.0
