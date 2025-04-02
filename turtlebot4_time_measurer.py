@@ -1,31 +1,54 @@
+import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseStamped
-import math
-import rclpy
-import logging
+from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
+import math
+import logging
+import time
 
 class PathListener(Node):
 	def __init__(self):
 		super().__init__('path_listener')
-		self.action_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 		logging.basicConfig(
 			filename='path_distance.log',
 			level=logging.INFO,
 			format='%(asctime)s - %(message)s',
 			datefmt='%Y-%m-%d %H:%M:%S'
 		)
-		self.subscription = self.create_subscription(
-			Path,
-			'/turtle/plan',
-			self.path_callback,
-			10
-		)
-		self.get_logger().info("Subscribed to /turtle/plan")
+		
+		# Publishers and subscribers
+		self.action_client = ActionClient(self, NavigateToPose, '/turtle/navigate_to_pose')
+		self.subscription = self.create_subscription(Path,'/turtle/plan',self.path_callback,10)
+		self.initial_pose_pub = self.create_publisher(PoseWithCovarianceStamped, '/turtle/initialpose', 10)
+
+		# Sedning goal and initial pose
 		self.logged_once = False
+		self.set_initial_pose()
+		time.sleep(5)	
 		self.send_goal()
+
+	def set_initial_pose(self):
+		initial_pose = PoseStamped()
+		initial_pose.header.frame_id = 'map'
+		initial_pose.pose.position.x = -0.157
+		initial_pose.pose.position.y = 0.068
+		initial_pose.pose.position.z = 0.0
+
+		initial_pose.pose.orientation.x = 0.0
+		initial_pose.pose.orientation.y = 0.0
+		initial_pose.pose.orientation.z = 0.0
+		initial_pose.pose.orientation.w = 1.739
+
+		initial_pose.pose.covariance[0] = 0.25
+		initial_pose.pose.covariance[7] = 0.25
+		initial_pose.pose.covariance[35] = 0.06853891945200942 # ChatGPT number
+		
+
+		self.initial_pose_pub.publish(initial_pose)
+		self.get_logger().info("Published initial pose to /turtle/initialpose")
+
 	def send_goal(self):
 		goal_msg = NavigateToPose.Goal()
 
@@ -33,8 +56,9 @@ class PathListener(Node):
 		goal_pose.header.frame_id = 'map'
 
 
-		goal_pose.position.x = 25.1
-		goal_pose.position.y = -13.2
+		goal_pose.position.x = -0.40
+		goal_pose.position.y = 1.42
+		goal_pose.position.z = 0.0
 		goal_pose.orientation.w = -0.00134
 		self.action_client.wait_for_server()
 		self.get_logger().info("Sending goal to /navigate_to_pose")
